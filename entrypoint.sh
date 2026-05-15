@@ -42,7 +42,7 @@ password = "${RCON_PASSWORD}"
 EOF
 fi
 
-exec java \
+exec mc-server-runner -stop-command "end" java \
     -Xms$JAVA_MEMORY \
     -Xmx$JAVA_MEMORY \
     $JAVA_FLAGS \
