@@ -9,7 +9,6 @@ if [ -d /data ] && [ "$(ls -A /data 2>/dev/null)" ]; then
     echo "Detected data directory owner: UID=$PUID, GID=$PGID"
 fi
 
-VELOCITY_VERSION=${VELOCITY_VERSION:-"latest"}
 VELOCITY_PORT=${VELOCITY_PORT:-25565}
 RCON_PORT=${RCON_PORT:-25575}
 RCON_PASSWORD=${RCON_PASSWORD:-minecraft}

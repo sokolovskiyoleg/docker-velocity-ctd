@@ -23,7 +23,7 @@ jobs:
         id: check
         run: |
           CURRENT_VERSION=$(cat .version 2>/dev/null || echo "")
-          LATEST=$(curl -s https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/latest | grep -o '"tag_name":"[^"]*"' | sed 's/"tag_name":"//;s/"//')
+          LATEST=$(curl -s https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/latest | grep -o '"tag_name": *"[^"]*"' | sed 's/"tag_name": *"//;s/"//')
           echo "Current: $CURRENT_VERSION"
           echo "Latest: $LATEST"
           echo "latest=$LATEST" >> $GITHUB_OUTPUT
@@ -45,3 +45,13 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add .version
           git commit -m "Update to ${{ steps.check.outputs.latest }}"
+
+      - name: Trigger Docker build
+        if: steps.check.outputs.new == 'true' && github.ref_name == 'main'
+        run: |
+          gh workflow run docker.yaml \
+            --ref main \
+            -f tags="build-${{ steps.check.outputs.latest }},latest" \
+            -f version="${{ steps.check.outputs.latest }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

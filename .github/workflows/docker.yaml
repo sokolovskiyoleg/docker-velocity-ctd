@@ -8,6 +8,11 @@ on:
         required: true
         type: string
         default: latest
+      version:
+        description: Velocity-CTD version tag (e.g. build-233 or latest)
+        required: false
+        type: string
+        default: latest
 
 jobs:
   docker-image:
@@ -41,6 +46,8 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
+          build-args: |
+            VELOCITY_VERSION=${{ inputs.version }}
 
       - name: Summarize tags
         run: |
