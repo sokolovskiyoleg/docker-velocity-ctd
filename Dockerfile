@@ -14,14 +14,14 @@ LABEL org.opencontainers.image.architecture="${TARGETARCH}"
 ARG VELOCITY_VERSION=latest
 ENV JAVA_MEMORY="512M"
 ENV JAVA_FLAGS="-XX:+UseStringDeduplication -XX:+UseG1GC -XX:G1HeapRegionSize=4M -XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:+AlwaysPreTouch"
-ENV PUID=1000
-ENV PGID=1000
 ENV VELOCITY_PORT="25565"
 ENV RCON_HOST="0.0.0.0"
 ENV RCON_PORT="25575"
 
-RUN apk add --no-cache openssl shadow wget coreutils && \
-    mkdir -p /opt/velocity-ctd && \
+RUN addgroup -g 1000 velocity-ctd && \
+    adduser -u 1000 -S -G velocity-ctd velocity-ctd && \
+    apk add --no-cache wget coreutils && \
+    mkdir -p /opt/velocity-ctd /data && \
     if [ "${VELOCITY_VERSION}" = "latest" ]; then \
         API_URL="https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/latest"; \
     else \
@@ -33,16 +33,17 @@ RUN apk add --no-cache openssl shadow wget coreutils && \
     echo "Downloading Velocity-CTD $TAG..." && \
     wget -q -O /opt/velocity-ctd/velocity-ctd.jar \
       "https://github.com/GemstoneGG/Velocity-CTD/releases/download/${TAG}/velocity-ctd-3.5.0-SNAPSHOT-${TAG#build-}.jar" && \
-    echo "${SHA256}  /opt/velocity-ctd/velocity-ctd.jar" | sha256sum -c -
+    echo "${SHA256}  /opt/velocity-ctd/velocity-ctd.jar" | sha256sum -c - && \
+    chown -R velocity-ctd:velocity-ctd /opt/velocity-ctd /data
 
-COPY --from=tianon/gosu /gosu /usr/local/bin/
-
-COPY entrypoint.sh /entrypoint.sh
+COPY --chown=velocity-ctd:velocity-ctd entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 VOLUME /data
 EXPOSE ${VELOCITY_PORT} ${RCON_PORT}
 
 WORKDIR /data
+
+USER velocity-ctd
 
 ENTRYPOINT ["/entrypoint.sh"]
