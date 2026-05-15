@@ -8,6 +8,10 @@ on:
 
 name: Watch Velocity-CTD releases
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   watch-releases:
     name: Watch Velocity-CTD release
