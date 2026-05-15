@@ -12,32 +12,34 @@ if [ ! -f "$VELOCITY_JAR" ]; then
 fi
 
 if [ ! -f /data/velocity.toml ]; then
-    echo "Creating default velocity.toml..."
-    cat > /data/velocity.toml << EOF
-config-version = "1.0"
-bind = "0.0.0.0:${VELOCITY_PORT}"
-motd = "&3Velocity-CTD Server"
-show-max-players = 500
-online-mode = true
+    echo "Generating velocity.toml..."
+    java -jar "$VELOCITY_JAR" &
+    VELOCITY_PID=$!
 
-[servers]
-lobby = "vanilla:25566"
+    TIMEOUT=30
+    while [ ! -f /data/velocity.toml ] && [ $TIMEOUT -gt 0 ]; do
+        sleep 0.5
+        TIMEOUT=$((TIMEOUT - 1))
+    done
 
-[forced-hosts]
+    kill $VELOCITY_PID 2>/dev/null
+    wait $VELOCITY_PID 2>/dev/null
+    echo "velocity.toml generated"
+fi
 
-[query]
-enabled = false
+# Apply env vars to config
+sed -i "s/^bind = .*/bind = \"0.0.0.0:${VELOCITY_PORT}\"/" /data/velocity.toml
+
+# Add RCON section if not present
+if ! grep -q '^\[rcon\]' /data/velocity.toml; then
+    cat >> /data/velocity.toml << EOF
 
 [rcon]
 enabled = true
 bind = "0.0.0.0"
 port = ${RCON_PORT}
 password = "${RCON_PASSWORD}"
-
-[metrics]
-enabled = true
 EOF
-    echo "velocity.toml created at /data/velocity.toml"
 fi
 
 exec java \
