@@ -1,0 +1,47 @@
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 */6 * * *"
+
+name: Watch Velocity-CTD releases
+
+jobs:
+  watch-releases:
+    name: Watch Velocity-CTD release
+    runs-on: ubuntu-latest
+    env:
+      DRY_RUN: ${{ github.ref_name != 'main' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.0
+
+      - name: Check latest release
+        id: check
+        run: |
+          CURRENT_VERSION=$(cat .version 2>/dev/null || echo "")
+          LATEST=$(curl -s https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/latest | grep -o '"tag_name":"[^"]*"' | sed 's/"tag_name":"//;s/"//')
+          echo "Current: $CURRENT_VERSION"
+          echo "Latest: $LATEST"
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+          if [ "$CURRENT_VERSION" != "$LATEST" ]; then
+            echo "new=true" >> $GITHUB_OUTPUT
+          else
+            echo "new=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update version file
+        if: steps.check.outputs.new == 'true'
+        run: |
+          echo "${{ steps.check.outputs.latest }}" > .version
+
+      - name: Commit version update
+        if: steps.check.outputs.new == 'true' && github.ref_name == 'main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .version
+          git commit -m "Update to ${{ steps.check.outputs.latest }}"
