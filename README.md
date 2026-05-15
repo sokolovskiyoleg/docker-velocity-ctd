@@ -1,51 +1,84 @@
 # Velocity-CTD Docker Image
 
-[![Build and push Docker image](https://github.com/sokolovskiyoleg/velocity-ctd/actions/workflows/docker.yaml/badge.svg)](https://github.com/sokolovskiyoleg/velocity-ctd/actions/workflows/docker.yaml)
+🌐 [Русский](README.ru.md)
 
-Docker image for [Velocity-CTD](https://github.com/GemstoneGG/Velocity-CTD) - a fork of Velocity with various optimizations, commands, and more.
+Docker image for [Velocity-CTD](https://github.com/GemstoneGG/Velocity-CTD) — a Minecraft server proxy fork with Redis support, advanced queue system, and built-in commands.
 
-## What is Velocity-CTD?
+## Quick Start
 
-Velocity-CTD is a Minecraft server proxy with unparalleled server support, scalability, and flexibility. It's a fork of Velocity with additional features:
-
-- Redis database support for multi-proxy setups
-- Advanced queue system
-- Built-in commands (/alert, /find, /gkick, /gip, /ping, /plist, /send, /transfer, etc.)
-- Fallback servers
-- And more...
-
-## How to use this image
-
-### Start a Velocity-CTD server
+### Docker Run
 
 ```bash
-docker run -p 25565:25565 -v /path/to/data:/data sokolovskiyoleg/velocity-ctd:latest
+docker run -d -p 25565:25565 -v $(pwd)/data:/data osn298/velocity-ctd:latest
 ```
+
+### Docker Compose
+
+```yaml
+services:
+  velocity:
+    image: osn298/velocity-ctd:latest
+    ports:
+      - "25565:25565"
+    volumes:
+      - ./data:/data
+    environment:
+      JAVA_MEMORY: 1G
+      RCON_PASSWORD: your-secure-password
+    restart: unless-stopped
+```
+
+## Image Tags
+
+| Tag | Description |
+|-----|-------------|
+| `latest` | Latest release |
+| `build-xxx` | Specific version (e.g. `build-233`) |
+
+## Configuration
 
 ### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `JAVA_MEMORY` | JVM memory (e.g., 512M, 1G) | 512M |
-| `JAVA_FLAGS` | Additional JVM flags | (optimized defaults) |
-| `VELOCITY_VERSION` | Specific version or "latest" | latest |
-| `VELOCITY_PORT` | Proxy port | 25565 |
-| `RCON_PORT` | RCON port | 25575 |
-| `RCON_PASSWORD` | RCON password | minecraft |
-| `PUID` | User ID for file ownership | 1000 |
-| `PGID` | Group ID for file ownership | 1000 |
+| `JAVA_MEMORY` | JVM memory (e.g. `512M`, `1G`) | `512M` |
+| `JAVA_FLAGS` | Additional JVM flags | Optimized defaults |
+| `VELOCITY_PORT` | Proxy port | `25565` |
+| `RCON_PORT` | RCON port | `25575` |
+| `RCON_PASSWORD` | RCON password | `minecraft` |
 
 ### Volumes
 
-- `/data` - Configuration and data files
+| Path | Purpose |
+|------|---------|
+| `/data` | `velocity.toml`, plugins, logs, and other data |
 
 ### Ports
 
-- `25565` - Minecraft proxy
-- `25575` - RCON
+| Port | Purpose |
+|------|---------|
+| `25565` | Minecraft proxy |
+| `25575` | RCON |
 
-## Build locally
+## Build
+
+### Latest version
 
 ```bash
 docker build -t velocity-ctd:test .
 ```
+
+### Specific version
+
+```bash
+docker build --build-arg VELOCITY_VERSION=build-233 -t velocity-ctd:test .
+```
+
+## Security
+
+- Container runs as non-root user (UID 1000)
+- Bind mount `/data` must be owned by UID 1000 on the host
+
+## License
+
+GPL-3.0
