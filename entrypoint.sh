@@ -28,10 +28,20 @@ if [ ! -f /data/velocity.toml ]; then
 fi
 
 # Apply env vars to config
-sed -i "s/^bind = .*/bind = \"0.0.0.0:${VELOCITY_PORT}\"/" /data/velocity.toml
+awk -v port="$VELOCITY_PORT" '
+  /^bind = / && !done_bind {
+    print "bind = \"0.0.0.0:" port "\""
+    done_bind = 1
+    next
+  }
+  { print }
+' /data/velocity.toml > /data/velocity.toml.tmp && mv /data/velocity.toml.tmp /data/velocity.toml
 
-# Add RCON section if not present
-if ! grep -q '^\[rcon\]' /data/velocity.toml; then
+# Update or add RCON section
+if grep -q '^\[rcon\]' /data/velocity.toml; then
+    sed -i "s/^port = .*/port = ${RCON_PORT}/" /data/velocity.toml
+    sed -i 's/^password = .*/password = "'"${RCON_PASSWORD}"'"/' /data/velocity.toml
+else
     cat >> /data/velocity.toml << EOF
 
 [rcon]
@@ -42,7 +52,7 @@ password = "${RCON_PASSWORD}"
 EOF
 fi
 
-exec java \
+exec mc-server-runner -stop-command "end" java \
     -Xms$JAVA_MEMORY \
     -Xmx$JAVA_MEMORY \
     $JAVA_FLAGS \
