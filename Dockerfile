@@ -23,7 +23,7 @@ ENV RCON_PORT="25575"
 
 RUN addgroup -g 1000 velocity-ctd && \
     adduser -u 1000 -S -G velocity-ctd velocity-ctd && \
-    apk add --no-cache wget coreutils
+    apk add --no-cache wget coreutils jq
 
 RUN wget -q -O /tmp/mc-server-runner.tar.gz \
       "https://github.com/itzg/mc-server-runner/releases/download/${MC_SERVER_RUNNER_VERSION}/mc-server-runner_${MC_SERVER_RUNNER_VERSION}_linux_${TARGETARCH}.tar.gz" && \
@@ -38,11 +38,16 @@ RUN mkdir -p /opt/velocity-ctd /data && \
         API_URL="https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/tags/${VELOCITY_VERSION}"; \
     fi && \
     RELEASE=$(wget -qO- "$API_URL") && \
-    TAG=$(echo "$RELEASE" | grep -o '"tag_name": *"[^"]*"' | sed 's/"tag_name": *"//;s/"//') && \
-    SHA256=$(echo "$RELEASE" | grep -o '"digest": *"[^"]*"' | sed 's/"digest": *"//;s/"//' | sed 's/sha256://') && \
+    TAG=$(echo "$RELEASE" | jq -er '.tag_name') && \
+    JAR_NAME="velocity-ctd-3.5.0-SNAPSHOT-${TAG#build-}.jar" && \
+    SHA256=$(echo "$RELEASE" | jq -r --arg name "$JAR_NAME" '.assets[] | select(.name == $name) | .digest' | sed 's/^sha256://') && \
+    if [ -z "$SHA256" ]; then \
+        echo "Could not find checksum for $JAR_NAME" >&2; \
+        exit 1; \
+    fi && \
     echo "Downloading Velocity-CTD $TAG..." && \
     wget -q -O /opt/velocity-ctd/velocity-ctd.jar \
-      "https://github.com/GemstoneGG/Velocity-CTD/releases/download/${TAG}/velocity-ctd-3.5.0-SNAPSHOT-${TAG#build-}.jar" && \
+      "https://github.com/GemstoneGG/Velocity-CTD/releases/download/${TAG}/${JAR_NAME}" && \
     echo "${SHA256}  /opt/velocity-ctd/velocity-ctd.jar" | sha256sum -c - && \
     chown -R velocity-ctd:velocity-ctd /opt/velocity-ctd /data
 
