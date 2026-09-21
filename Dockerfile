@@ -1,6 +1,6 @@
 ARG TARGETPLATFORM
 ARG TARGETARCH=amd64
-FROM --platform=${TARGETPLATFORM:-linux/amd64} eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 ARG TARGETARCH
 
@@ -39,15 +39,22 @@ RUN mkdir -p /opt/velocity-ctd /data && \
     fi && \
     RELEASE=$(wget -qO- "$API_URL") && \
     TAG=$(echo "$RELEASE" | jq -er '.tag_name') && \
-    JAR_NAME="velocity-ctd-3.5.0-SNAPSHOT-${TAG#build-}.jar" && \
-    SHA256=$(echo "$RELEASE" | jq -r --arg name "$JAR_NAME" '.assets[] | select(.name == $name) | .digest' | sed 's/^sha256://') && \
-    if [ -z "$SHA256" ]; then \
-        echo "Could not find checksum for $JAR_NAME" >&2; \
+    ASSET=$(echo "$RELEASE" | jq -cr '[.assets[] | select(.name | startswith("velocity-ctd-") and endswith(".jar") and (startswith("velocity-ctd-fatjar-") | not))] | first // empty') && \
+    if [ -z "$ASSET" ] || [ "$ASSET" = "null" ]; then \
+        echo "Could not find Velocity-CTD bootstrap jar asset for $TAG" >&2; \
+        echo "Available assets:" >&2; \
+        echo "$RELEASE" | jq -r '.assets[].name' >&2; \
         exit 1; \
     fi && \
-    echo "Downloading Velocity-CTD $TAG..." && \
-    wget -q -O /opt/velocity-ctd/velocity-ctd.jar \
-      "https://github.com/GemstoneGG/Velocity-CTD/releases/download/${TAG}/${JAR_NAME}" && \
+    JAR_NAME=$(echo "$ASSET" | jq -er '.name') && \
+    JAR_URL=$(echo "$ASSET" | jq -er '.browser_download_url') && \
+    SHA256=$(echo "$ASSET" | jq -r '.digest // "" | select(startswith("sha256:")) | sub("^sha256:"; "")') && \
+    if [ -z "$SHA256" ]; then \
+        echo "Could not find sha256 digest for $JAR_NAME" >&2; \
+        exit 1; \
+    fi && \
+    echo "Downloading Velocity-CTD $TAG ($JAR_NAME)..." && \
+    wget -q -O /opt/velocity-ctd/velocity-ctd.jar "$JAR_URL" && \
     echo "${SHA256}  /opt/velocity-ctd/velocity-ctd.jar" | sha256sum -c - && \
     chown -R velocity-ctd:velocity-ctd /opt/velocity-ctd /data
 
