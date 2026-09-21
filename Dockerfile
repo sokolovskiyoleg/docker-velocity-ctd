@@ -1,6 +1,6 @@
 ARG TARGETPLATFORM
 ARG TARGETARCH=amd64
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 ARG TARGETARCH
 
