@@ -55,7 +55,7 @@ jobs:
         run: |
           gh workflow run docker.yaml \
             --ref main \
-            -f tags="build-${{ steps.check.outputs.latest }},latest" \
+            -f tags="${{ steps.check.outputs.latest }},latest" \
             -f version="${{ steps.check.outputs.latest }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
