@@ -1,6 +1,7 @@
 ARG TARGETPLATFORM
 ARG TARGETARCH=amd64
-FROM eclipse-temurin:25-jre-alpine
+FROM eclipse-temurin:25-jre
+SHELL ["/bin/bash", "-c"]
 
 ARG TARGETARCH
 
@@ -21,42 +22,46 @@ ENV VELOCITY_PORT="25565"
 ENV RCON_HOST="0.0.0.0"
 ENV RCON_PORT="25575"
 
-RUN addgroup -g 1000 velocity-ctd && \
-    adduser -u 1000 -S -G velocity-ctd velocity-ctd && \
-    apk add --no-cache wget coreutils jq
+RUN userdel -r ubuntu 2>/dev/null || true; \
+  groupdel ubuntu 2>/dev/null || true; \
+  groupadd -g 1000 velocity-ctd && \
+  useradd -u 1000 -g velocity-ctd -M -s /usr/sbin/nologin velocity-ctd && \
+  apt-get update && \
+  apt-get install -y --no-install-recommends wget jq ca-certificates && \
+  rm -rf /var/lib/apt/lists/*
 
 RUN wget -q -O /tmp/mc-server-runner.tar.gz \
-      "https://github.com/itzg/mc-server-runner/releases/download/${MC_SERVER_RUNNER_VERSION}/mc-server-runner_${MC_SERVER_RUNNER_VERSION}_linux_${TARGETARCH}.tar.gz" && \
-    tar -xzf /tmp/mc-server-runner.tar.gz -C /usr/local/bin/ && \
-    rm /tmp/mc-server-runner.tar.gz && \
-    chmod +x /usr/local/bin/mc-server-runner
+  "https://github.com/itzg/mc-server-runner/releases/download/${MC_SERVER_RUNNER_VERSION}/mc-server-runner_${MC_SERVER_RUNNER_VERSION}_linux_${TARGETARCH}.tar.gz" && \
+  tar -xzf /tmp/mc-server-runner.tar.gz -C /usr/local/bin/ && \
+  rm /tmp/mc-server-runner.tar.gz && \
+  chmod +x /usr/local/bin/mc-server-runner
 
 RUN mkdir -p /opt/velocity-ctd /data && \
-    if [ "${VELOCITY_VERSION}" = "latest" ]; then \
-        API_URL="https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/latest"; \
-    else \
-        API_URL="https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/tags/${VELOCITY_VERSION}"; \
-    fi && \
-    RELEASE=$(wget -qO- "$API_URL") && \
-    TAG=$(echo "$RELEASE" | jq -er '.tag_name') && \
-    ASSET=$(echo "$RELEASE" | jq -cr '[.assets[] | select(.name | startswith("velocity-ctd-") and endswith(".jar") and (startswith("velocity-ctd-fatjar-") | not))] | first // empty') && \
-    if [ -z "$ASSET" ] || [ "$ASSET" = "null" ]; then \
-        echo "Could not find Velocity-CTD bootstrap jar asset for $TAG" >&2; \
-        echo "Available assets:" >&2; \
-        echo "$RELEASE" | jq -r '.assets[].name' >&2; \
-        exit 1; \
-    fi && \
-    JAR_NAME=$(echo "$ASSET" | jq -er '.name') && \
-    JAR_URL=$(echo "$ASSET" | jq -er '.browser_download_url') && \
-    SHA256=$(echo "$ASSET" | jq -r '.digest // "" | select(startswith("sha256:")) | sub("^sha256:"; "")') && \
-    if [ -z "$SHA256" ]; then \
-        echo "Could not find sha256 digest for $JAR_NAME" >&2; \
-        exit 1; \
-    fi && \
-    echo "Downloading Velocity-CTD $TAG ($JAR_NAME)..." && \
-    wget -q -O /opt/velocity-ctd/velocity-ctd.jar "$JAR_URL" && \
-    echo "${SHA256}  /opt/velocity-ctd/velocity-ctd.jar" | sha256sum -c - && \
-    chown -R velocity-ctd:velocity-ctd /opt/velocity-ctd /data
+  if [ "${VELOCITY_VERSION}" = "latest" ]; then \
+  API_URL="https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/latest"; \
+  else \
+  API_URL="https://api.github.com/repos/GemstoneGG/Velocity-CTD/releases/tags/${VELOCITY_VERSION}"; \
+  fi && \
+  RELEASE=$(wget -qO- "$API_URL") && \
+  TAG=$(echo "$RELEASE" | jq -er '.tag_name') && \
+  ASSET=$(echo "$RELEASE" | jq -cr '[.assets[] | select(.name | startswith("velocity-ctd-") and endswith(".jar") and (startswith("velocity-ctd-fatjar-") | not))] | first // empty') && \
+  if [ -z "$ASSET" ] || [ "$ASSET" = "null" ]; then \
+  echo "Could not find Velocity-CTD bootstrap jar asset for $TAG" >&2; \
+  echo "Available assets:" >&2; \
+  echo "$RELEASE" | jq -r '.assets[].name' >&2; \
+  exit 1; \
+  fi && \
+  JAR_NAME=$(echo "$ASSET" | jq -er '.name') && \
+  JAR_URL=$(echo "$ASSET" | jq -er '.browser_download_url') && \
+  SHA256=$(echo "$ASSET" | jq -r '.digest // "" | select(startswith("sha256:")) | sub("^sha256:"; "")') && \
+  if [ -z "$SHA256" ]; then \
+  echo "Could not find sha256 digest for $JAR_NAME" >&2; \
+  exit 1; \
+  fi && \
+  echo "Downloading Velocity-CTD $TAG ($JAR_NAME)..." && \
+  wget -q -O /opt/velocity-ctd/velocity-ctd.jar "$JAR_URL" && \
+  echo "${SHA256}  /opt/velocity-ctd/velocity-ctd.jar" | sha256sum -c - && \
+  chown -R velocity-ctd:velocity-ctd /opt/velocity-ctd /data
 
 COPY --chown=velocity-ctd:velocity-ctd entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
