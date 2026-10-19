@@ -17,7 +17,7 @@ LABEL org.opencontainers.image.architecture="${TARGETARCH}"
 ARG VELOCITY_VERSION=latest
 ARG MC_SERVER_RUNNER_VERSION=1.14.6
 ENV JAVA_MEMORY="512M"
-ENV JAVA_FLAGS="-XX:+UseStringDeduplication -XX:+UseG1GC -XX:G1HeapRegionSize=4M -XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:+AlwaysPreTouch"
+ENV JAVA_FLAGS="-XX:+UseStringDeduplication -XX:+UseG1GC -XX:G1HeapRegionSize=4M -XX:+UnlockExperimentalVMOptions -XX:+ParallelRefProcEnabled -XX:+AlwaysPreTouch -Dvelocity.max-plugin-message-payload-size=1048576"
 ENV VELOCITY_PORT="25565"
 ENV RCON_HOST="0.0.0.0"
 ENV RCON_PORT="25575"
